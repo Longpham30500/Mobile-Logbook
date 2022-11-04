@@ -1,8 +1,63 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View , Image, Button, Alert, TextInput, TouchableOpacity} from 'react-native';
+import {DatabaseConnected} from './database/database'
+
+const db =  DatabaseConnected.getConnection()
 
 export default function App() {
   const [linkImg, setLinkImg] = useState('https://itechnolabs.ca/wp-content/uploads/2022/01/complete-guide-to-react-native-for-cross-platform-apps-development-itechnolabs.jpg')
+  
+  const submitted = () => {
+    if(!linkImg) {
+        alert("Please enter your link image !")
+        return
+      } else {
+        try {
+          db.transaction((tx) => {
+            tx.executeSql(
+              "INSERT INTO Detail (images_detail) VALUES (?)",
+              [linkImg],
+              (tx, results) => {
+                console.log(results.rowsAffected);
+              }
+            );
+          });
+        } catch (error) {
+          console.log(error);
+        }
+      }
+    };
+
+    const checkData = () => {
+      try {
+        db.transaction((tx) => {
+          tx.executeSql("SELECT name FROM sqlite_master WHERE type='table' AND name='Detail'", [], (tx, result) => {
+            console.log('item:', result.rowsAffected.length);
+            var len = result.rows.length;
+            if (len > 0) {
+              navigation.navigate("Home");
+            }
+          });
+        });
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+  const createTable = () => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        "CREATE TABLE IF NOT EXISTS Detail(Id INTEGER PRIMARY KEY AUTOINCREMENT, images_detail VARCHAR(255))",
+      );
+    });
+  };
+
+  useEffect(() => {
+    createTable();
+    checkData();
+  }, []);
+
+  
   return (
     <View style={styles.container}>
       <Image
@@ -31,7 +86,7 @@ export default function App() {
         value={linkImg}
       />
 
-        <TouchableOpacity onPress={() => Alert.alert('Backward button pressed')}
+        <TouchableOpacity onPress={() => submitted()}
         style ={styles.buttonCustom}>
             <Text style={styles.text}>Add Link</Text>
         </TouchableOpacity>
